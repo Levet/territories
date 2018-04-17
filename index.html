@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<style>
+
+.states :hover {
+  fill: red;
+}
+
+.state-borders {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 0.5px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+</style>
+<svg width="960" height="600"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://d3js.org/topojson.v2.min.js"></script>
+<script>
+
+class Game {
+  constructor(){
+    this.selectionPeriod = true;
+    this.players = [];
+    this.activePlayer =
+    this.territories = [];
+    this.createTerritories();
+  }
+
+  selectStartingPlayer(){
+    const playerNumber = Math.floor(Math.random() * this.numberOfPlayers())
+  }
+
+  announcePlayersTurn(){
+    alert(`It's player${this.activePlayer.playerNumber}'s turn!'`)
+  }
+
+  endPlayerTurn(){
+    if(this.activePlayer.playerNumber >= this.numberOfPlayers()){
+      this.activePlayer = this.players[0];
+    } else {
+      this.activePlayer = getPlayerByNumber(this.activePlayer.playerNumber + 1)
+    }
+
+    this.announcePlayersTurn();
+  }
+
+  getPlayerByNumber(number){
+    return this.players.find(player => player.playerNumber === number)
+  }
+
+  numberOfPlayers(){
+    return this.players.length;
+  }
+
+  createTerritories(territoryType){
+
+    if( ! us.objects.hasPropertyOf( territoryType ) ) {
+      throw new Error("Unavailable territory type. Appropriate types include: " + Object.keys(us.objects).join(", "))
+    }
+
+    for(territory of us.objects[territoryType]){
+      this.territories.push(new Territory())
+    }
+  }
+
+  isClaimableTerritories(){
+    return !!this.territories.find(item => item.isClaimed())
+  }
+
+  claimTerritory(territory){
+    if(selectionPeriod){
+      territory.claim();
+    }
+  }
+
+  attackTerritory(){
+    if()
+  }
+
+
+}
+
+class Territory {
+
+  constructor(){
+    this.claimedBy = null
+  }
+
+  isClaimed(){
+    return !!this.claimedBy
+  }
+
+  claim(player){
+    this.claimedBy = player;
+  }
+
+  attack(){
+
+  }
+}
+
+class Player {
+  constructor(settings, playerNumber){
+    this.settings = settings;
+    this.playerNumber = playerNumber;
+
+  }
+}
+</script>
+<script>
+
+var svg = d3.select("svg");
+
+var path = d3.geoPath();
+
+d3.json("https://d3js.org/us-10m.v1.json", function(error, us) {
+  if (error) throw error;
+
+  svg.append("g")
+      .attr("class", "states")
+      .selectAll("path")
+      .data(topojson.feature(us, us.objects.states).features)
+      .enter().append("path")
+      .attr("d", path);
+
+  svg.append("path")
+      .attr("class", "state-borders")
+      .attr("d", path(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; })));
+});
+
+</script>
