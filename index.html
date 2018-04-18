@@ -20,17 +20,23 @@
 <script src="https://d3js.org/topojson.v2.min.js"></script>
 <script>
 
+const playerColors = ["blue", "green", "red"];
+let us;
+
 class Game {
   constructor(){
     this.selectionPeriod = true;
     this.players = [];
-    this.activePlayer =
     this.territories = [];
-    this.createTerritories();
+    this.createTerritories("states");
+    this.createPlayers(3);
+    this.selectStartingPlayer();
   }
 
   selectStartingPlayer(){
-    const playerNumber = Math.floor(Math.random() * this.numberOfPlayers())
+    const playerNumber = Math.floor(Math.random() * this.numberOfPlayers());
+    console.log(playerNumber)
+    this.activePlayer = this.players[playerNumber]
   }
 
   announcePlayersTurn(){
@@ -39,9 +45,11 @@ class Game {
 
   endPlayerTurn(){
     if(this.activePlayer.playerNumber >= this.numberOfPlayers()){
+      console.log("a", this.activePlayer.playerNumber)
       this.activePlayer = this.players[0];
     } else {
-      this.activePlayer = getPlayerByNumber(this.activePlayer.playerNumber + 1)
+      console.log("b", this.activePlayer.playerNumber + 1)
+      this.activePlayer = this.getPlayerByNumber(this.activePlayer.playerNumber + 1)
     }
 
     this.announcePlayersTurn();
@@ -57,12 +65,20 @@ class Game {
 
   createTerritories(territoryType){
 
-    if( ! us.objects.hasPropertyOf( territoryType ) ) {
+    if( ! us.objects.hasOwnProperty( territoryType ) ) {
       throw new Error("Unavailable territory type. Appropriate types include: " + Object.keys(us.objects).join(", "))
     }
 
-    for(territory of us.objects[territoryType]){
-      this.territories.push(new Territory())
+    for(const territory of us.objects[territoryType].geometries){
+      this.territories.push(new Territory(territory.id))
+    }
+  }
+
+  createPlayers(numberOfPlayers){
+    for(let i = 0; i < numberOfPlayers; i++){
+      this.players.push(new Player({
+        color: playerColors[i]
+      }, i + 1))
     }
   }
 
@@ -70,14 +86,39 @@ class Game {
     return !!this.territories.find(item => item.isClaimed())
   }
 
-  claimTerritory(territory){
-    if(selectionPeriod){
-      territory.claim();
+  claimTerritory(id){
+
+    const territory = this.getTerritoryById(id);
+
+    console.log(territory)
+
+    if(this.selectionPeriod){
+      territory.claim(this.activePlayer);
     }
+
+    if(this.hasUnclaimedTerritories() === false){
+       this.selectionPeriod = false;
+       alert("Selection period has ended. Please place your troops.")
+    }
+
+    this.endPlayerTurn();
+  }
+
+  hasUnclaimedTerritories(){
+    return !!this.territories.find(territory => territory.claimedBy === null)
+  }
+
+  getTerritoryById(id){
+    return this.territories.find(territory => territory.getId() === id)
   }
 
   attackTerritory(){
-    if()
+
+    this.endPlayerTurn();
+  }
+
+  redeemCards(cardValue){
+    this.activePlayer.garrisonedTroops += cardValue
   }
 
 
@@ -85,8 +126,9 @@ class Game {
 
 class Territory {
 
-  constructor(){
+  constructor(id){
     this.claimedBy = null
+    this.id = id
   }
 
   isClaimed(){
@@ -95,6 +137,10 @@ class Territory {
 
   claim(player){
     this.claimedBy = player;
+  }
+
+  getId(){
+    return this.id;
   }
 
   attack(){
@@ -106,7 +152,14 @@ class Player {
   constructor(settings, playerNumber){
     this.settings = settings;
     this.playerNumber = playerNumber;
+    this.cardCollection = [];
+    this.garrisonedTroops = 0;
+  }
 
+
+
+  getPlayerColor(){
+    return this.settings.color;
   }
 }
 </script>
@@ -116,19 +169,43 @@ var svg = d3.select("svg");
 
 var path = d3.geoPath();
 
-d3.json("https://d3js.org/us-10m.v1.json", function(error, us) {
+d3.json("https://d3js.org/us-10m.v1.json", function(error, territories) {
   if (error) throw error;
+
+  us = territories;
+
+
 
   svg.append("g")
       .attr("class", "states")
       .selectAll("path")
       .data(topojson.feature(us, us.objects.states).features)
       .enter().append("path")
-      .attr("d", path);
+      .attr("d", path)
+      .attr("id", function(d){ console.log(d); return d.id })
+      .on("click", function(d){
+
+        const currentGame = getCurrentGame();
+
+        console.log(currentGame)
+
+        if(currentGame && currentGame.selectionPeriod){
+          d3.select(this).attr("fill", currentGame.activePlayer.getPlayerColor())
+          currentGame.claimTerritory(d.id)
+        }
+
+      })
 
   svg.append("path")
       .attr("class", "state-borders")
       .attr("d", path(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; })));
+
+  function getCurrentGame(){
+      return game;
+  }
+
+  const game = new Game();
 });
+
 
 </script>
