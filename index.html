@@ -31,6 +31,32 @@ class Game {
     this.createTerritories("states");
     this.createPlayers(3);
     this.selectStartingPlayer();
+    this.suppressPlayerTurnAnnoucement = false;
+    this.round = 1;
+    this.turn = 1;
+  }
+
+  awardTerritoriesOwnedBonus(){
+     for(const player of this.players){
+        const awardValue = this.numberOfTerritoriesOwnedByPlayer(player)
+        player.addTroopsToGarrison(awardValue)
+     }
+  }
+
+  numberOfTerritoriesOwnedByPlayer(player){
+    return this.territories.filter(territory => territory.claimedBy.playerNumber === player.playerNumber).length;
+  }
+
+  autoSelectTerritories(){
+    this.suppressPlayerTurnAnnoucement = true;
+    const territoryIds = this.territories.map(territory => territory.getId())
+    const shuffledTerritories = territoryIds.sort((territory, i) => Math.floor(Math.random() * 3) - 1)
+
+    while(shuffledTerritories.length > 0){
+      const territoryId = shuffledTerritories.pop();
+      this.claimTerritory(territoryId)
+    }
+    this.suppressPlayerTurnAnnoucement = false;
   }
 
   selectStartingPlayer(){
@@ -40,12 +66,23 @@ class Game {
   }
 
   announcePlayersTurn(){
+
+    if(this.suppressPlayerTurnAnnoucement){
+      return;
+    }
+
     alert(`It's player${this.activePlayer.playerNumber}'s turn!'`)
   }
 
   endPlayerTurn(){
+
+    if(this.turn % this.numberOfPlayers){
+       this.round ++;
+    }
+
+    this.turn ++;
+
     if(this.activePlayer.playerNumber >= this.numberOfPlayers()){
-      console.log("a", this.activePlayer.playerNumber)
       this.activePlayer = this.players[0];
     } else {
       console.log("b", this.activePlayer.playerNumber + 1)
@@ -70,7 +107,7 @@ class Game {
     }
 
     for(const territory of us.objects[territoryType].geometries){
-      this.territories.push(new Territory(territory.id))
+      this.territories.push(new Territory(`territory-${territory.id}`))
     }
   }
 
@@ -89,8 +126,6 @@ class Game {
   claimTerritory(id){
 
     const territory = this.getTerritoryById(id);
-
-    console.log(territory)
 
     if(this.selectionPeriod){
       territory.claim(this.activePlayer);
@@ -136,6 +171,7 @@ class Territory {
   }
 
   claim(player){
+    d3.select("#" + this.id).attr("fill", player.getPlayerColor())
     this.claimedBy = player;
   }
 
@@ -156,7 +192,22 @@ class Player {
     this.garrisonedTroops = 0;
   }
 
+  garrisonedTroopsValueChange(){
+     // Trigger getter to display in html
+  }
 
+  addTroopsToGarrison(troops){
+     this.garrisonedTroops += troops;
+  }
+
+  removeTroopsFromGarrison(troops){
+
+    if(troops > this.garrisonedTroops){
+      throw new Error("Troops being removed from garrison, is greated than the amount of troops garrisoned.")
+    }
+
+    this.garrisonedTroops -= troops
+  }
 
   getPlayerColor(){
     return this.settings.color;
@@ -182,7 +233,7 @@ d3.json("https://d3js.org/us-10m.v1.json", function(error, territories) {
       .data(topojson.feature(us, us.objects.states).features)
       .enter().append("path")
       .attr("d", path)
-      .attr("id", function(d){ console.log(d); return d.id })
+      .attr("id", function(d){ console.log(d); return `territory-${d.id}` })
       .on("click", function(d){
 
         const currentGame = getCurrentGame();
@@ -190,7 +241,6 @@ d3.json("https://d3js.org/us-10m.v1.json", function(error, territories) {
         console.log(currentGame)
 
         if(currentGame && currentGame.selectionPeriod){
-          d3.select(this).attr("fill", currentGame.activePlayer.getPlayerColor())
           currentGame.claimTerritory(d.id)
         }
 
@@ -205,6 +255,9 @@ d3.json("https://d3js.org/us-10m.v1.json", function(error, territories) {
   }
 
   const game = new Game();
+
+  setTimeout(() => game.autoSelectTerritories(), 3000)
+
 });
 
 
