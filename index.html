@@ -162,8 +162,9 @@ class Game {
 class Territory {
 
   constructor(id){
-    this.claimedBy = null
-    this.id = id
+    this.claimedBy = null;
+    this.id = id;
+    this.borderedBy = [];
   }
 
   isClaimed(){
@@ -190,6 +191,7 @@ class Player {
     this.playerNumber = playerNumber;
     this.cardCollection = [];
     this.garrisonedTroops = 0;
+
   }
 
   garrisonedTroopsValueChange(){

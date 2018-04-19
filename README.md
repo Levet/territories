@@ -9,6 +9,12 @@ Challenges
 - Ideally any topography could be passed in and be made into a playable map.
 - On load it would find areas with shared borders and those would be "attackable" territories.
 
++ Filter out all coordinates that are map borders.
++ Using the first territory in the list, find a territory that borders it.
++ Mark both territories as bordering each other.
++ Remove shared coordinates from each territory's available coordinates list.
++ Move to next coordinate, until available coordinates list is empty.
+
 2: Random territory grouping for bonus troops.
 - Given an arbitrary map, grouping territories to form regions/countries/states.
 - Groups should share borders
